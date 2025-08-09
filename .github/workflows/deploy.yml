@@ -1,4 +1,4 @@
-name: Deploy to EC2 via ECR
+name: deploy
 
 on:
   push:
@@ -8,35 +8,63 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        id: ecr-login
+      - name: Ensure ECR repository
+        run: |
+          aws ecr describe-repositories --repository-names "${{ secrets.ECR_REPOSITORY }}" >/dev/null 2>&1 \
+          || aws ecr create-repository --repository-name "${{ secrets.ECR_REPOSITORY }}"
+
+      - id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push Docker image
+      - name: Build & push image
+        env:
+          IMAGE_URI: ${{ steps.ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest
         run: |
-          IMAGE_URI="${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest"
           docker build -t "$IMAGE_URI" .
           docker push "$IMAGE_URI"
 
-      - name: Deploy on EC2
-        uses: appleboy/ssh-action@v1.2.0
+      - uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
-            docker pull "${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest"
-            docker stop app || true && docker rm app || true
-            docker run -d --name app -p 80:80 "${{ steps.ecr-login.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest"
+            set -euo pipefail
+            REGISTRY='${{ steps.ecr.outputs.registry }}'
+            IMAGE_URI="$REGISTRY/${{ secrets.ECR_REPOSITORY }}:latest"
+            APP_DIR="/home/${{ secrets.EC2_USER }}/order-status-ai"
+
+            mkdir -p "$APP_DIR"
+            printf "OPENAI_API_KEY=%s\n" "${{ secrets.OPENAI_API_KEY }}" > "$APP_DIR/.env"
+            printf "SHEET_ID=%s\n" "${{ secrets.SHEET_ID }}" >> "$APP_DIR/.env"
+            printf "SHEET_WORKSHEET_NAME=%s\n" "${{ secrets.SHEET_WORKSHEET_NAME }}" >> "$APP_DIR/.env"
+            printf "SLACK_WEBHOOK_URL=%s\n" "${{ secrets.SLACK_WEBHOOK_URL }}" >> "$APP_DIR/.env"
+            echo "GOOGLE_SERVICE_ACCOUNT_JSON=/app/credentials.json" >> "$APP_DIR/.env"
+            echo "MODEL=gpt-4o-mini" >> "$APP_DIR/.env"
+            printf '%s' "${{ secrets.GOOGLE_CREDENTIALS_JSON }}" > "$APP_DIR/credentials.json"
+            chmod 600 "$APP_DIR/.env" "$APP_DIR/credentials.json"
+
+            if ! command -v aws >/dev/null 2>&1; then
+              if command -v dnf >/dev/null 2>&1; then sudo dnf install -y awscli; else sudo apt-get update && sudo apt-get install -y awscli; fi
+            fi
+
+            sudo aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | sudo docker login --username AWS --password-stdin "$REGISTRY"
+
+            sudo docker pull "$IMAGE_URI"
+            sudo docker rm -f app || true
+            sudo docker run -d --name app --restart unless-stopped \
+              -p 80:5000 \
+              --env-file "$APP_DIR/.env" \
+              -v "$APP_DIR/credentials.json:/app/credentials.json:ro" \
+              "$IMAGE_URI"
+
+            sudo docker image prune -f
