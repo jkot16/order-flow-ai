@@ -50,7 +50,7 @@ jobs:
             printf "SLACK_WEBHOOK_URL=%s\n" "${{ secrets.SLACK_WEBHOOK_URL }}" >> "$APP_DIR/.env"
             echo "GOOGLE_SERVICE_ACCOUNT_JSON=/app/credentials.json" >> "$APP_DIR/.env"
             echo "MODEL=gpt-4o-mini" >> "$APP_DIR/.env"
-            printf '%s' "${{ secrets.GOOGLE_CREDENTIALS_JSON }}" > "$APP_DIR/credentials.json"
+            echo "${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}" | base64 --decode > "$APP_DIR/credentials.json"
             chmod 600 "$APP_DIR/.env" "$APP_DIR/credentials.json"
 
             if ! command -v aws >/dev/null 2>&1; then
