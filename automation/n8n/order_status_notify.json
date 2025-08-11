@@ -1,0 +1,327 @@
+{
+  "name": "Order Status – Email & Slack",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "f947caad-5d4c-4472-9dce-1ba5d740ca36",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -80,
+        0
+      ],
+      "id": "80500272-ecef-4915-b272-9c16c72d1da0",
+      "name": "Webhook",
+      "webhookId": "f947caad-5d4c-4472-9dce-1ba5d740ca36"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7bffd583-3712-4f92-86f5-c64598f5d26a",
+              "leftValue": "={{$json.body.orderId}}",
+              "rightValue": "1",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "2c66a873-cfce-4efd-9be3-c76aedf71e73",
+              "leftValue": "{{$json.body.status}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "26ba85bc-2c4c-4bae-b2d3-cb983a2f3241",
+              "leftValue": "={{$json.body.email}}",
+              "rightValue": "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        144,
+        0
+      ],
+      "id": "4075a48f-e4b8-4039-a738-a5e4293ba24d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bb1b1264-f4c3-486f-b142-3581da2073fc",
+              "name": "prompt",
+              "value": "={{\n`Return ONLY the email body in plain text (no \"Subject:\" line).\nUse EXACTLY these values. Do not invent or change them. No placeholders.\n\ncustomer_name: ${$json.body.customer}\norder_id: ${$json.body.orderId}\nnew_status: ${$json.body.status}\neta: ${$json.body.eta || 'n/a'}\n\nWrite 2–3 short sentences, polite and professional. End with:\n\"Kind regards,\nCustomer Care Team\"`\n}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        368,
+        -240
+      ],
+      "id": "0e31182b-24d4-42bb-8644-544ae9232e08",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $vars.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"temperature\": 0,\n  \"top_p\": 1,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Return ONLY the email body in plain text (no Subject line). Use EXACTLY the provided values. No placeholders. No invented data. Do not change names, dates, or status values.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"customer_name: {{ $json.body.customer }}\\norder_id: {{ $json.body.orderId }}\\nnew_status: {{ $json.body.status }}\\neta: {{ $json.body.eta || 'n/a' }}\\n\\nWrite 2–3 short sentences, polite and professional, adapting the tone to the status:\\n- If new_status contains 'Delayed', apologise for the delay and express understanding.\\n- If new_status contains 'Shipped' or 'In Transit', express happiness to inform them and appreciation for their patience.\\n- For any other status, use a neutral informative tone.\\n\\nEnd with:\\nKind regards,\\nCustomer Care Team\"\n    }\n  ]\n}\n",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        -16
+      ],
+      "id": "de9c4355-0267-4b4f-8e63-62be20e4930e",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.body.email }}\n",
+        "subject": "={{ `Order Status Update - Order ${$json.body.orderId}` }}\n",
+        "emailType": "text",
+        "message": "={{ ($json.choices[0].message.content || '').replace(/^Subject:.*\\n+/,'') }}\n",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        928,
+        -320
+      ],
+      "id": "c0c97ae7-e714-439d-bd10-c652738ae69c",
+      "name": "Send a message",
+      "webhookId": "ba10cb6b-d60a-48b2-83f7-724e0da78b32",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GL512bYLiiYV0qyB",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        704,
+        -224
+      ],
+      "id": "cd94466c-d949-4eab-b022-cd29aa7c0a2a",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0919AP6VJA",
+          "mode": "list",
+          "cachedResultName": "new-channel"
+        },
+        "text": "={{ \n  (\n    $json.body.status && $json.body.status.match(/Delayed/i) ? ':warning: *ORDER DELAYED*' \n    : ($json.body.status && $json.body.status.match(/Shipped|In Transit/i) ? ':truck: *ORDER UPDATE*' \n    : ':information_source: *ORDER STATUS*')\n  ) \n  + ` | #${$json.body.orderId} | ${$json.body.status} | ETA: ${$json.body.eta || 'n/a'}`\n  + `\\nCustomer: ${$json.body.customer} <mailto:${$json.body.email}|${$json.body.email}>`\n}}\n",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "link_names": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        928,
+        -112
+      ],
+      "id": "e66e82d4-c3d5-4dbf-bc0b-5c6b6fa67d4e",
+      "name": "Slack message",
+      "webhookId": "387c64cf-b914-485c-86c9-f909e84f9948",
+      "credentials": {
+        "slackApi": {
+          "id": "uptqPniOVIbtvgJX",
+          "name": "Slack account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0919AP6VJA",
+          "mode": "id"
+        },
+        "text": "=*Invalid payload in Order Status*\n• OrderID: {{$json.body.orderId || 'missing'}}\n• Status: {{$json.body.status || 'missing'}}\n• Email: {{$json.body.email || 'missing'}}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        368,
+        96
+      ],
+      "id": "5e7e281e-33d3-4862-bada-7c9131a5e750",
+      "name": "Slack fail message",
+      "webhookId": "088ac3a4-4ecb-42d2-b6c8-99ec41430b51",
+      "credentials": {
+        "slackApi": {
+          "id": "uptqPniOVIbtvgJX",
+          "name": "Slack account 5"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack fail message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        []
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Slack message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7dc77d0c-1b18-4f83-ae38-0441b3b4e883",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ed0e3256470038fd484b456a61bcdde743688431f48c1876c149ad55c9271189"
+  },
+  "id": "eAUkxeaLIWilIpcd",
+  "tags": []
+}
