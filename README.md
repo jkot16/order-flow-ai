@@ -9,7 +9,7 @@
 
 ![OrderFlowAI UI](assets/appui.png)  
 > AI-powered, containerized system for order status checking, daily KPI reporting, and automated email/Slack notifications.  
-> Connects Google Sheets, a Flask web app, n8n workflows, Power Automate flows, and Python reporting scripts into a cohesive system of integrated tools, deployed with Docker on AWS EC2.
+> Integrates Google Sheets, a Flask web app, n8n workflows, Power Automate flows, and Python reporting scripts into a coordinated workflow, with the core application containerized and deployed on AWS EC2.
 
 
 📚 **Table of Contents**
@@ -27,7 +27,7 @@
 
 ## 1. Overview
 
-**OrderFlowAI** is a containerized, end-to-end system for managing and tracking customer orders through a connected set of tools and automations:
+OrderFlowAI is a containerized AI-driven system for real-time order tracking, KPI reporting, and automated customer notifications.
 
 This project was inspired by real-world logistics and customer service workflows. It combines AI assistants, process automation, and reporting – directly matching the skills and tools required in modern AI/ML-driven business analytics and RPA environments.
 
@@ -45,7 +45,7 @@ This setup mirrors a production-like workflow where data is centralized, applica
 **🔗 Live Demo**: [OrderStatusAI](http://3.120.131.214/)
 ---
 
-> **Test it now!**  
+> **Use the provided test credentials to simulate a customer inquiry:**  
 > 🆔 Order: **1001**  
 > 📧 Email: **john.smith@example.com**
 
@@ -99,14 +99,14 @@ This setup mirrors a production-like workflow where data is centralized, applica
 4. If a matching order is found, AI generates a 2–4 sentence response based on order status and ETA.
 5. Empathetic tone is applied if the order is delayed; a static message is used if AI is unavailable.
 
-> Google Sheet
+> Sample Google Sheet
 
 ![sheet](assets/googlesheets.png)  
 ---
 
 ## 5. n8n Workflow – Order Status Notifications
 
-**File:** `automation/n8n/order_status_email_slack.json`
+**File:** `automation/n8n/order_status_notify.json`
 
 **Flow:**
 - Trigger: HTTP Webhook (POST) with order data.
@@ -128,7 +128,7 @@ End with: Kind regards,Customer Care Team"
 **Setup:**
 1. Import JSON into n8n.
 2. Configure Gmail OAuth2, Slack API token, OpenAI API key.
-3. Adjust Slack channel, webhook path, or prompts as needed.
+3. Adjust Slack channel, webhook path, or prompt as needed.
 4. Activate workflow.
 
 > n8n workflow
@@ -208,7 +208,6 @@ End with: Kind regards,Customer Care Team"
 - Builds and tags Docker image.
 - Pushes image to ECR.
 - SSH into EC2 → pulls image → runs container with `.env` and google sheets `credentials.json`.
-- Health check on `/ask` endpoint.
 
 ---
 
@@ -223,14 +222,12 @@ End with: Kind regards,Customer Care Team"
 
 ## 10. Why this project matters
 
-> _“OrderFlowAI simulates a real production workflow by combining AI-driven communication, automated reporting, and multi-platform integration in a cloud-deployed environment.”_
+ > OrderFlowAI delivers tangible value by combining AI, automation, and cloud-native deployment:
 
-Demonstrates:
-- AI for both chat and automated email communications.
-- Centralized, API-driven data handling.
-- Event-driven automation across multiple tools.
-- Cloud-native deployment with CI/CD.
-- Operational visibility via Slack.
+- **Enhanced customer experience** - AI-driven, empathetic communication keeps customers informed and engaged.
+- **Operational efficiency** – Automated KPI reporting, email notifications, and status tracking reduce manual workload.
+- **Production-ready architecture** – Containerized deployment with CI/CD ensures reliable, repeatable releases.
+- **Cross-platform integration** – Google Sheets as the central hub, with Flask, n8n, Power Automate, Slack, and AWS working together within one coordinated workflow.
 
 ---
 
