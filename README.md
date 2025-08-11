@@ -41,7 +41,9 @@ This project was inspired by real-world logistics and customer service workflows
 
 This setup mirrors a production-like workflow where data is centralized, applications provide real-time access, and automation handles reporting, notifications, and deployment.
 
-🔗 **Live Demo**: [OrderStatusAI](http://3.120.131.214/)
+---
+**🔗 Live Demo**: [OrderStatusAI](http://3.120.131.214/)
+---
 
 > **Test it now!**  
 > 🆔 Order: **1001**  
