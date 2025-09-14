@@ -6,7 +6,6 @@
 
 
 
-
 ![OrderFlowAI UI](assets/appui.png)  
 > AI-powered, containerized system for order status checking, daily KPI reporting, and automated email/Slack notifications.  
 > Integrates Google Sheets, a Flask web app, n8n workflows, Power Automate flows, and Python reporting scripts into a coordinated workflow, with the core application containerized and deployed on AWS EC2.
