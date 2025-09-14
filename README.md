@@ -42,16 +42,7 @@ This project was inspired by real-world logistics and customer service workflows
 This setup mirrors a production-like workflow where data is centralized, applications provide real-time access, and automation handles reporting, notifications, and deployment.
 
 ---
-**🔗 Live Demo**: [OrderStatusAI](http://3.120.131.214/)
----
 
-> **Use the provided test credentials to simulate a customer inquiry:**  
-> 🆔 Order: **1001**  
-> 📧 Email: **john.smith@example.com**
-
-
-
----
 
 ## 2. Features
 
